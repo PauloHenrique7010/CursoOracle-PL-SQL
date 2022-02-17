@@ -1,0 +1,36 @@
+=> Limites Oracle Database 21c XE
+ -> Até 12 Gb de dados
+ -> Até 2 Gb de ram para instância.
+ 
+=> Como baixar e instalar
+ 1. Criar conta oracle (Oracle Technical Resources)
+	a. https://www.oracle.com/technical-resources/
+	b. Botão "View Accounts"
+	c. Criar conta no oracle	
+ 2. Ultima versão JDK
+	a. Entrar na conta (Confirmar conta no e-mail recebido)
+	b. Seção "Java Downloads"
+	c. Java JDK (For developers)
+	d. Escolher o instalador para Windows (MSI Installer)
+	e. Instalar
+ 3. Configurar Variavies de ambiente
+	a. Abrir variaveis de ambiente do windows
+	b. Add no Path -> "C:\Program Files\Java\jdk-17.0.2\bin" (verificar a versão do seu JDK)
+	c. Add nova variavel de ambiente "JAVA_HOME", Valor -> "C:\Program Files\Java\jdk-17.0.2"
+	d. Abrir cmd e rodar "java -version" e "javac -version". Irão mostrar se foi instalado com sucesso
+ 4. Instalando Oracle Database
+	a. https://www.oracle.com/technical-resources/
+	b. Seção "Database Downloads" (https://www.oracle.com/downloads/#category-database)
+	c. Escolher "Database Express Edition" (https://www.oracle.com/database/technologies/xe-downloads.html)
+	d. Baixar o Database para windows
+	e. Extrair arquivo Zip em uma pasta
+	f. Rodar instalador como Administrador (Arquivo setup.exe)
+	g. Definir a pasta de instalação (OracleDatabase21cXE)
+	h. Definir senha para o DBA
+	i. Abrir services.msc
+		1. OracleServiceXE (Serviço do banco de dados oracle)
+		2. OracleOraDB21Home1TNSListener
+	
+	
+	
+	
