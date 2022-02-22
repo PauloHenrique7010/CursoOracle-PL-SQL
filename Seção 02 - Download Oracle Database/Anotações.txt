@@ -30,7 +30,53 @@
 	i. Abrir services.msc
 		1. OracleServiceXE (Serviço do banco de dados oracle)
 		2. OracleOraDB21Home1TNSListener
+		
+=> Configurar Listener e TNS Names
+ 1. Listener
+	a. Ir para o diretorio "D:\Outros\Curso\Programas\OracleDatabase21cXE\homes\OraDB21Home1\network\admin"
+	b. Criar backup do arquivo "listener.ora"
+	c. Editar listener.ora e trocar trecho.
+	LISTENER =
+  (DESCRIPTION_LIST =
+    (DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC1521))
+    )
+  )
+ 2. TNSNAMES
+	a. Criar backup do arquivo "tnsnames.ora"
+	b. Editar arquivo da msm maneira do item c.
 	
-	
-	
-	
+	XE =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = XE)
+    )
+  )
+
+LISTENER_XE =
+  (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+	c. Renicie os servico do oracle e listener.
+		1. OracleServiceXE
+		2. OracleOraDB21Home1TNSListener
+ 3. Criar e testar uma conexão local
+	a. Menu iniciar -> "Oracle - OraDB21Home1" -> Assistente de configuração de rede
+	b. Escolher opção Configuração do nome do serviço de rede local
+	c. Opção "Adicionar"
+	d. Nome do serviço "XEPDB1"
+	e. Protocolo TCP
+	f. nome do host "localhost"
+	g. marcar opção para realizar teste.
+	h. Botão alterar log-iniciar
+	i. User: "system"
+	   senha: "oracle" (é a senha que definiu na instalação)
+	j. Nome do Serviço de rede: "XEPDB1"
+
+ 4. Testar conexão via sql plus
+	a. abrir cmd
+	b. rodar comando "sqlplus system/oracle@xepdb1 (usuario/senha@database)
+	c. rodar comando sql padrão (deve estar conectado já no bd)
+		1. "Select sysdate from dual"
+
