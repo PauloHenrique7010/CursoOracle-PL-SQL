@@ -1,0 +1,144 @@
+-> Item 13 - Definindo identificadores - Variaveis
+=> Variaveis
+ - Armazenamento temporário de dados
+ - Manipulação dos valores armazenados
+ - Reutilização
+ - Facilidade de manutenção
+ - Declarado na seção DECLARE
+ - Pode add o atributo "NOT NULL"
+ - Ex: "nomevariavel [CONSTANT] tipoVariavel [NOT NULL] [:= | DEFAULT expressão];
+ 
+=> Identificadores
+ - Nome generico para -> Variaveis, constantes, exceções, cursores
+ - Max 30 caracteres de tamanho
+ - Deve inicar com caracter alfabetico
+ - N pode usar palavras reservadas
+ 
+=> Quoted Identifiers (Indentificadores entre aspas"
+ - Se criar esse tipo de identificador, no programa todo tem que chamar a variavel
+   com as aspas
+ - Ex: "vNumero" NUMBER := 1;
+ 
+=> Literal
+ - Valor explicito definido por string, numero ou booleano
+ - Case sensitive
+ ex: "vtexto := 'String de caracteres';"
+ - Valor da variavel basicamente
+ - Cada tipo de variavel tem o seu literal proprio, string, booleano
+
+=> Pratica
+
+SET SERVEROUTPUT ON 
+DECLARE
+  vNumero  NUMBER(11,2) := 1200.50;  
+BEGIN  
+  DBMS_OUTPUT.PUT_LINE('Numero = ' || vNumero);
+END;
+ 
+-> Item 14 - Definindo identificadores - Constantes
+
+=> Pratica
+SET SERVEROUTPUT ON 
+DECLARE
+  vPi CONSTANT NUMBER(38,15) := 3.141592653589793;
+BEGIN  
+  DBMS_OUTPUT.PUT_LINE('Numero = ' || vPi);
+  --Constante n permite mudar valor
+  --vPi := 3.1848;
+END;
+
+=> Item 15 - Tipo de dados no PL/SQL - DataTypes
+DataTypes
+ - Armazena um unico valor e não possui componentes internos
+ - Separado em categoria
+	1. NUMBER
+	 a. Apenas numeros
+	 b. Number(p, s) -> p = precisao, s = casas decimais
+	2. CHAR
+	 a. strings de tamanho fix
+	 b. "vestado CHAR(2) NOT NULL := 'RS';"
+	3. VARCHAR(2)
+	 a. Varia tamanho, se declarou com 50 espaços e usou 30, desce pra 30 o espaço ocupado
+	 b. PLSQL tem um tamanho maior disponivel para declarar o tamanho
+	4. Bool
+	 a. Valores possivels(PL/SQL): True, False, Null (parecido com false, mas é null)
+	5. Long
+	 a. string de caracteres
+	 b. Ex: "vtexto LONG := 'CAR';"
+	6. LONG RAW
+	 A. binarios
+	 b. Ex: "vvar LONG RAW := hextoraw('43'||'41'||'52');"
+	7. ROWID
+	 a. Armazena a linha de uma tabela
+	 b. char de 18 caracteres
+	 c. ex: "vrowid ROWID;"
+	8. Date
+	 a. Min 1/01/4712 AC
+	 b. Max 31/12/9999 DC
+	 c. Ex: "vData1 DATE := SYSDATE;" OU "vdata2 DATE := '28/01/20'";
+	9. TimeStamp
+	 a. extende o tipo de dado date
+	 b. 9 digitos de segundos apos o decimal
+	 c. mais precisão que o date
+	 d. Ex: "vdata1 TIMESTAMP := SYSTIMESTAMP;" OU "vdata2 TIMESTAMP(3) := SYSTIMESTAMP;" [3 DIGITOS DPS DA VIRGULA DO SEGUNDO]
+	10. TIMESTAMP WITH TIME ZONE
+	 a. é o timestamp junto com o UTC
+	 b. Ex: "vdata1 TIMESTAMP WITH TIME ZONE := SYSTIMESTAMP;"
+	11. TIMESTAMP WITH LOCAL TIME ZONE
+	 a. Pega o timestamp do client e n do server.
+	12. NCHAR e NVARCHAR2
+	 a. string unicode
+	 b. usa por default AL16UTF16, mas pode mudar para UTF8
+	 c. AL16UTF16, gasta 2 bytes fisicos por caracter
+	 d. UTF8, gasta 3 bytes fisicos por caracter
+	13. BINARY_INTEGER
+	 a. tipo numerico sem decimal
+	 b. calculo mais eficiente com numeros inteiros que um tipo de dado
+	    number porque consome menos espaço em memória
+	14. BINARY_FLOAT 
+	 a. Alternativa ao number
+	 b. precisão simples(32 bits)
+	15. BINARY_DOUBLE
+	 a. precisão dupla (64bits)
+Regras de nomenclatura
+ - Dois objetos podem ter msm nome, mas em blocos diferentes
+Declarando variaveis utilizando %type
+ - ao inves de codificar o tipo de dado e a precisção de uma variavel,
+   da pra usar o atributo "%TYPE" para declarar uma variavel e acordo com uma coluna do banco de dados
+   ou de outra variavel
+ - é bom para quando a variavel vai receber o valor de uma coluna do banco, ai n da pau de incompatibilidade
+ - ex: "vfirst_name employees.first_name%TYPE;"
+ 
+Pratica 
+ - Abrir conexão pelo usuário HR
+ - Rodar "DESC employees" - vai descrever a tabela (Colunas e DataType)
+ - Abrir o arquivo Seção 6 Aula 3
+ 
+-> Item 16 - Variavel Bind
+
+Variavel Bind
+ - Declarada do lado de foa do blocos
+ - tipo uma variavel global
+ - Para declarar
+  ex: "VARIABLE gnumero NUMBER;"
+ - para chamar a variavel de dentro do bloco 
+  - ":gnumero = 2." -- isso dentro do bloco
+  
+ => Pratica
+SET SERVEROUTPUT ON
+VARIABLE gmedia NUMBER
+DECLARE
+  vnumero1  NUMBER(11,2) := 2000;
+  vnumero2  NUMBER(11,2) := 5000;
+BEGIN  
+  :gmedia := (vnumero1 + vnumero2) / 2;
+  DBMS_OUTPUT.PUT_LINE('Media = ' || TO_CHAR(:gmedia));
+EXCEPTION
+  WHEN OTHERS 
+  THEN 
+    DBMS_OUTPUT.PUT_LINE('Erro Oracle: ' || SQLCODE || SQLERRM);
+END;
+
+
+
+ 
