@@ -1,0 +1,31 @@
+=> Estrutura
+Declare (Opcional)
+ --Variaveis, constantes, cursores e exceções definidas pelo usuário
+Begin
+ -- Comandos SQL e PL/SQL
+Exception (Opcional)
+End;
+
+DBMS_OUTPUT
+ - Package pronta
+ - Para imprimir texto na tela
+ - Para usar, colocar linha "SET SERVEROUTPUT ON" antes do bloco
+  - "SET" é um comando do SQL *Plus
+ - Ex:
+  "BBMS_OUTPUT.PUT_LINE('TEXTO');"
+
+=> Prática
+ 1. Abrir conexão pelo usuário HR
+ 2. Executar script abaixo:
+ 
+SET SERVEROUTPUT ON 
+DECLARE
+  vNumero1  NUMBER(11,2) := 500;
+  vNumero2  NUMBER(11,2) := 400;
+  vMedia  	NUMBER(11,2);
+BEGIN
+  vMedia := (vNumero1 + vNumero2) / 2;
+  DBMS_OUTPUT.PUT_LINE('Media = ' || vMedia);
+END;
+
+Para executar -> F5
