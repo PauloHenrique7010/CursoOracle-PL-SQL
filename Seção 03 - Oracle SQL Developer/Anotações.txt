@@ -1,0 +1,56 @@
+=> Download Oracle SQL Developer
+ 1. Link: https://www.oracle.com/technical-resources/
+ 2. Logar na conta
+ 3. Seção "SQL Developer" -> https://www.oracle.com/tools/downloads/sqldev-downloads.html
+ 4. Baixar "Windows 64-bit with JDK 8 included"
+ 5. Extrai na pasta na msm pasta que foi instalado o database
+ 6. É um executavel java, não precisa instalar.
+ 7. Criar atalho na area de trabalho
+ 
+Item 5
+=> Criar conexão usuário sys
+ 1. Canto esquerdo "Oracle Conexões" -> Botão Direito -> "Nova Conexão"
+ 2. Name = "sys_XEPDB1"
+ 3. Nome de usuário "sys". Senha "oracle"
+ 4. Atribuição "SYSDBA"
+ 5. Detalhes -> Nome do Serviço -> "XEPDB1"
+ 6. Botão Testar ("Texto de sucesso aparece no canto esquerdo da tela")
+ 7. Se sucesso, botão salvar
+ 8. Botão conectar, vai pedir a senha "oracle" de novo.
+ 9. "Select sys_date from dual"
+ 10. Ir na lista de conexões, botão direito, "Desconectar"
+ 
+Item 6
+=> Criar usuário HR
+ 1. Conectar ao sys no SQL Developer
+ 2. Arquivo -> Abrir -> Abrir arquivo "Cria usuario HR.sql"
+ 3. Botão Executar Script ou F5
+ 4. Conexão "sys_XEPDB1"
+ 
+Item 7
+=> Criar conexão para usuário HR
+ 1. Repetir item 5 para o usuário HR
+ 2. Name = "hr_XEPDB1"
+ 3. Nome de usuário "hr". Senha "hr"
+ 4. Atribuição "Padrão"
+ Resto igual ao item5
+
+=> Configurar IDE para mostrar contador nas linhas de query
+Ferramentas -> preferencias -> Editor de codigos -> Fluxo de linha -> (Check) Mostrar número de linha
+
+Item 8
+=> Criando objetos do schema do usuário HR
+ 1. Abrir conexão HR
+ 2. Pegar o arquivo script "Seção 3 Aula 5 Cria Objetos"
+ 3. Copiar o conteudo e colar no SQL Developer
+ 4. Rodar script (F5)
+ 
+Item 9
+=> Populando objetos do schema do usuário HR
+ 1. Com a conexão do HR aberta
+ 2. Rodar o script "Seção 3 Aula 6 .."
+ 
+Item 10
+=> Criando Indices, Inserindo comentarios e outros schemas do usuario hr
+ 1. Com a conexão do HR aberta
+ 2. Rodar o script "Seção 3 Aula 7.."
