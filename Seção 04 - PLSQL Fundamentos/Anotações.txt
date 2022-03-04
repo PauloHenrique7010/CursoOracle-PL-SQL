@@ -1,0 +1,67 @@
+PL/SQL
+ - Procedural Language/Structed Query Language
+ - Pertence a oracle
+ - Cria programas, não apenas BD
+ - Linguagem procedural (IF, ELSE, FOR, While)
+ - Permite tratamento de exceções dentro de blocos PL/SQL
+ - Tem um otimo gerenciamento de memória
+
+PL/SQL Engine
+ - Esta dentro do banco de dados oracle e outras
+   ferramentas Oracle (Oracle Forms e e Oracle Report)
+ - um bloco PL/SQL pode ser sql ou pl/SQL, diferenciando
+   quando é o plsql que roda um bloco com tratamento de exceção ou
+   se é um SQL Simples
+
+Benefícios do PL/SQL
+ - Integração
+  -> Se criar um Bloco(Package, procedure) PL/SQL no banco, outras ferramentas 
+     podem chamar este bloco.
+  -> Pode criar uma "biblioteca compartilhada" para ser utilizada
+     por outras ferramentas oracle, mas o melhor seria salvar um bloco
+	 no BD
+ - Controle lógico(Whilte, if, for..)
+ - Modularização (Sistema dividido em modulos)
+  -> uma procedure chama outra
+ - Portabilidade
+  -> Se a empresa precisar migrar do windows server para linux
+     não precisa modificar nada, só transportar o oracle
+ - Segurança
+  -> Privilegios de usuário
+ - Reutilização de código
+  -> Varias aplicações conseguem chamar as funções que estão
+     no bd.
+ - Tratamento de exceções
+
+Tipos de construções PL/SQL
+ 1. Bloco Anônimo
+ 2. Stored Procedure/Função
+ 3. Pacote de procedures (Package)
+ 4. Trigger de Banco
+ 5. Procedure/Função de aplicação
+ 6. Trigger de aplicação
+ 
+Estrutura do Bloco de anonimo
+
+Declare (Opcional)
+ -- Declaração de variaveis, constantes, cursores e exceções
+Begin 
+ -- comandos SQL e PL/SQL
+Exception (Opcional)
+ -- Tratamento de exceções
+End;
+
+Exemplo bloco anonimo
+
+SET SERVEROUTPUT ON 
+DECLARE
+  vTexto  VARCHAR2(100) := 'Seja bem vindo ao PL/SQL';
+BEGIN
+  DBMS_OUTPUT.PUT_LINE(vTexto);
+EXCEPTION
+  WHEN OTHERS 
+  THEN 
+    DBMS_OUTPUT.PUT_LINE('Erro Oracle: ' || SQLCODE || SQLERRM);
+END;
+ 
+   
