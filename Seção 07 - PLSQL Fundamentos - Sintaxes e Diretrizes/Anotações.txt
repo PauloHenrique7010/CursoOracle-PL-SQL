@@ -1,0 +1,125 @@
+Item 17 - Sintaxe e Diretrizes de um Bloco PL/SQL
+ - PL/SQL é uma extensão de SQL
+ - Regras de sintaxe geral do SQL também se aplicam ao PL/SQL
+ - Comandos podem ser extender por varias linhas
+ - Para comentário de uma linha "--", para comentario de varias linhas "/* */"
+ 
+Item 18 - Utilizando Funções no bloco PL/SQL
+ - Tipos de função:
+	1. Númericas (Round, trunc)
+	2. Caractere (STR, Upper, lower)
+	3. Conversão de tipo de dados (To_Char, To_date)
+	4. Data (Date, Last_day)
+	5. Genérica (Generic2)
+	6. Definidtas pelo usuário
+	
+ - Não pode usar em plsql, somente em sql
+  - funções de grupo: avg, count, min, max, sum...
+  - decode
+
+ - Pratica
+ 
+SET SERVEROUTPUT ON
+DECLARE
+  vNumero1  NUMBER(13,2);  -- Declaração de variável para o Primeiro número
+  vNumero2  NUMBER(13,2);  -- Declaração de variável para o Segundo número
+  vMedia    NUMBER(13,2);  -- Declaração de variável para a Média
+BEGIN
+  /* Cálculo do valor da média entre dois números
+     Autor: Emílio Scudero
+     Data: 05/05/2020 */
+	 
+  vNumero1  :=  5000.8888;
+  vNumero2  :=  3000.4444;
+  vMedia    :=  ROUND((vNumero1 + vNumero2) / 2, 2);
+  DBMS_OUTPUT.PUT_LINE('vnumero1 = ' || vnumero1);  -- Impressão do Primeiro Número
+  DBMS_OUTPUT.PUT_LINE('vnumero2 = ' || vnumero2);  -- Impressão do Segundo Número
+  DBMS_OUTPUT.PUT_LINE('Media = ' || TO_CHAR(vMedia,'99G999G999D99'));     -- Impressão da Média calculada 
+END;
+
+Item 19 - Blocos aninhados e escopo de identificadores
+ - Colocar um bloco dentro de outro bloco
+ - Vantagem: dividir parte logica de um bloco em sub-bloco
+ - Bloco pai pode ser chamado nos bloco filhos
+ - Se declarar um bloco filho sem identificador, entende-se que é do identificador do pai
+ - As variaveis dos blocos filhos só são visiveis dentro do proprio filho, mas as
+   variaveis do bloco pai são visiveis a qualquer momento apos sua declaração
+ 
+ - Pratica1
+SET SERVEROUTPUT ON
+DECLARE
+  vbloco1 VARCHAR2(20) := 'Bloco 1';
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vbloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+  DECLARE
+    vbloco2 VARCHAR2(20) := 'Bloco 2';
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vbloco1);
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 2: ' || vbloco2);
+  END;
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vbloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+END;
+
+ - Bloco pode ser identificado por labels
+  - "<<LABEL>>"
+  - Colocar antes do declare
+ - EX:
+ 
+SET SERVEROUTPUT ON
+<<BLOCO1>>
+DECLARE
+  vbloco1 VARCHAR2(20) := 'Bloco 1';
+BEGIN
+END;
+
+- Prática 2
+
+-- Identificando Blocos através de Labels
+
+SET SERVEROUTPUT ON
+<<BLOCO1>>
+DECLARE
+  vbloco1 VARCHAR2(20) := 'Bloco 1';
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || bloco1.vbloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+  <<BLOCO2>>
+  DECLARE
+    vbloco2 VARCHAR2(20) := 'Bloco 2';
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || bloco1.vbloco1);
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 2: ' || bloco2.vbloco2);
+  END;
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || bloco1.vbloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+END;
+
+Item 20 - Padrões de codificação sugeridos
+ - Comandos SQL, Palavras chave, tipos de dados -> Letras maiúsculas
+ - Nome de identificadores e parametros, nome de tabelas e colunas -> Letras minúsculas
+ - Variavel -> Prefixo v => "vMedia"
+ - Constante -> Prefixo c => "cPi"
+ - Parametro -> Prefixo p => "pNum1"
+ - Variável Global -> Prefixo g => "gGlobal"
+ - Boas Práticas
+  - Identação e tabulação
+  
+ - Prática
+
+SET SERVEROUTPUT ON
+DECLARE
+  vBloco1 VARCHAR2(20) := 'Bloco 1';
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vBloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+  DECLARE
+    vBloco2 VARCHAR2(20) := 'Bloco 2';
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vBloco1);
+    DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 2: ' || vBloco2);
+  END;
+  DBMS_OUTPUT.PUT_LINE('Referenciando variável do Bloco 1: ' || vBloco1);
+  -- Se voce referencia vbloco2 aqui ocorrerá Erro
+END; 
