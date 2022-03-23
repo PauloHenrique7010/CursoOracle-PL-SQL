@@ -1,0 +1,143 @@
+Item 48 - Tratamento de exceções
+
+- Exceções são eventos (Erros geralmente) que podem ser tratados
+  designando ações a serem tomadas quando um erro ocorre.
+- Quando uma exceção não é tratada, ela é propagada para 
+  quem chamou a função que deu exceção
+- Exceções predefinidas da oracle: TOO_MANY_ROWS, NO_DATA_FOUND...
+- Se a exceção ocorrida não encontrar o bloco no exception referente
+  a ela, ela será propagada entre os blocos
+  
+EXCEPTION
+WHEN exceção1 [OR EXCEÇÃO2]
+THEN
+END;
+
+THEN OTHERS (TIPO UM ELSE)
+
+COLLECTION_IS_NULL - ORA-06531 - Collection n esta inicializada
+CURSOR_ALREADY_OPEN - ORA-06511 - Tentativa de abrir cursor ja aberto
+DUP_VAL_ON_INDEX - ORA-00001 - TENTATIVA DE INSERIR UM VALOR com indice duplicado
+
+
+RAISE_APPLICATION_ERROR (numero, string, bool)
+ - numero -> intervalo de -20000 a -209999
+ - string -> texto de até 2048 bytes de tamanho
+ - bool -> opctional, false (default) erro sobrepoe outros erros, true, coloca na pilha dos erros
+
+SQLERRM - retorna a mensagem do erro
+SQLCODE - retorna o codigo do erro
+
+-- Tratamento de Exceções Pré-definidas Oracle
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+ACCEPT  pEmployee_id PROMPT 'Digite o Id do Empregado: '
+DECLARE
+  vFirst_name   employees.first_name%TYPE;
+  vLast_name    employees.last_name%TYPE;
+  vEmployee_id  employees.employee_id%TYPE := &pEmployee_id;
+BEGIN
+  SELECT first_name, last_name
+  INTO   vfirst_name, vlast_name
+  FROM   employees
+  WHERE  employee_id = vEmployee_id;
+
+  DBMS_OUTPUT.PUT_LINE('Empregado: ' || vfirst_name || ' ' || vlast_name);
+ 
+EXCEPTION
+  WHEN NO_DATA_FOUND 
+  THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Empregado não encontrado, id = ' || 
+     TO_CHAR(vEmployee_id));
+  WHEN OTHERS 
+  THEN
+     RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle - ' || SQLCODE || SQLERRM);
+
+END;
+
+
+Item 49 - Exceções definidas pelo desenvolvedor
+
+- Desenvolvedor pode criar suas proprias exceções
+  declarando um exception na seção DECLARE
+- usar "RAISE nomeexpcetion;" dentro do bloco begin
+
+
+-- Exceções Definidas pelo Desenvolvedor 
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+ACCEPT  pEmployee_id PROMPT 'Digite o Id do Empregado: '
+DECLARE
+   vFirst_name    employees.first_name%Type;
+   vLast_name     employees.last_name%Type;
+   vJob_id        employees.job_id%type;
+   vEmployee_id   employees.employee_id%TYPE := &pEmployee_id;
+   ePresident     EXCEPTION;
+BEGIN
+   SELECT first_name, last_name, job_id
+   INTO   vFirst_name, vLast_name, vJob_id
+   FROM   employees
+   WHERE  employee_id = vEmployee_id;
+
+   IF   vJob_id = 'AD_PRES' 
+   THEN
+        RAISE ePresident;  
+   END IF;
+
+EXCEPTION
+  WHEN NO_DATA_FOUND 
+  THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Empregado não encontrado, id = ' || 
+     TO_CHAR(vEmployee_id));
+  WHEN ePresident 
+  THEN
+       UPDATE employees
+       SET    salary = salary * 1.5
+       WHERE  employee_id = vEmployee_id;
+       COMMIT;
+  WHEN OTHERS 
+  THEN
+       RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+Item 50 - Pragma Exception init
+
+- Direcionar um erro em um subprograma
+  para uma exception tratada
+  
+DECLARE
+
+nome_exception EXCEPTION;
+
+PRAGMA EXCEPTION_INIT(nome_excecao, erro_oracle);
+
+-- PRAGMA EXCEPTION INIT
+
+DECLARE
+   vemployee_id    employees.employee_id%TYPE := 300;
+   vfirst_name     employees.first_name%TYPE := 'Robert';
+   vlast_name      employees.last_name%TYPE := 'Ford';
+   vjob_id         employees.job_id%TYPE := 'XX_YYYY';
+   vphone_number   employees.phone_number%TYPE := '650.511.9844';
+   vemail          employees.email%TYPE := 'RFORD';
+   efk_inexistente EXCEPTION;
+   PRAGMA EXCEPTION_INIT(efk_inexistente, -2291); --violacao de foreign key
+
+BEGIN
+   INSERT INTO employees (employee_id, first_name, last_name, phone_number, email, hire_date,job_id)
+   VALUES (vemployee_id, vfirst_name, vlast_name, vphone_number, vemail, sysdate, vjob_id);
+EXCEPTION
+   WHEN  efk_inexistente 
+   THEN
+         RAISE_APPLICATION_ERROR(-20003, 'Job inexistente!');
+   WHEN OTHERS 
+   THEN
+         RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+-- Forçando o Erro para descobrir o código de Erro a ser tratado
+
+   INSERT INTO employees (employee_id, first_name, last_name, phone_number, email, hire_date, job_id)
+   VALUES (employees_seq.nextval, 'Joseph', 'Smith', '3333333', 'JSMITH', sysdate, 'ZZZZ_XX');
