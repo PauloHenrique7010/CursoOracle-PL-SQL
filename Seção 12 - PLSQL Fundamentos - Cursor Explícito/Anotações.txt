@@ -1,0 +1,199 @@
+Item 44 - Controlando um cursor explicito
+ - Servidor utiliza areas de trabalho chamada private SQL para
+   executar comandos sql e guardar informações de processamento
+ - cursores servem para nomear essas areas
+ - Cursor aparece em todas as areas do processamento
+ - Permite processar cada linha de um select
+ - Conjuntos de linhas retornados se chama result set
+ - Cursor marca a linha atual do result set
+ - active set (Area do cursor)
+ 
+ %ISOPEN - retorna true se o cursor ta aberto
+ %notfound - retorna true se acabou as linhas do fetch
+ 
+ -- Controlando um Cursor Explícito com LOOP Básico
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  CURSOR  employees_cursor  IS
+  SELECT  *
+  FROM    employees;  -- Declaração do Cursor
+  
+  employees_record  employees_cursor%rowtype; 
+BEGIN
+  /* Inicializa */
+  
+  OPEN  employees_cursor;  -- Abrindo o Cursor
+  
+  /* Loop */
+  
+  LOOP  -- Loop Básico
+    FETCH  employees_cursor  
+    INTO  employees_record; -- Fetch do Cursor
+    
+    EXIT WHEN employees_cursor%notfound;
+    
+    DBMS_OUTPUT.PUT_LINE(employees_record.employee_id || ' - ' ||
+                         employees_record.first_name || ' ' || 
+                         employees_record.last_name || ' - ' ||
+                         employees_record.department_id || ' - ' ||
+                         employees_record.job_id || ' - ' ||
+                         employees_record.phone_number || ' - ' ||
+                         LTRIM(TO_CHAR(employees_record.salary, 'L99G999G999D99')));
+    
+  END LOOP;
+  
+  CLOSE employees_cursor; -- Close do Cursor
+END;
+
+
+-- Controlando um Cursor Explícito com WHILE LOOP
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  CURSOR  employees_cursor  IS
+  SELECT  *
+  FROM    employees; -- Declaração do Cursor
+  employees_record  employees_cursor%rowtype; 
+BEGIN
+  /* Inicializa */
+  
+  OPEN  employees_cursor; -- Abrindo o Cursor
+  
+  FETCH  employees_cursor  
+    INTO  employees_record; -- Fetch do Cursor
+	
+  /* Loop */
+  
+  WHILE  employees_cursor%found  LOOP
+     DBMS_OUTPUT.PUT_LINE(employees_record.employee_id || ' - ' ||
+                         employees_record.first_name || ' ' || 
+                         employees_record.last_name || ' - ' ||
+                         employees_record.department_id || ' - ' ||
+                         employees_record.job_id || ' - ' ||
+                         employees_record.phone_number || ' - ' ||
+                         LTRIM(TO_CHAR(employees_record.salary, 'L99G999G999D99')));
+    FETCH  employees_cursor  
+      INTO  employees_record;
+  END LOOP;
+  
+  CLOSE employees_cursor; -- Close do Cursor
+END;
+
+Item 45 - Cursor for loop
+
+DECLARE
+CURSOR nome_cursor
+IS comando_select;
+
+BEGIN
+
+FOR variavel_record(n precisa de declaracao) IN nome_cursor
+LOOP
+ -- OPEN -> N PRECISA
+ -- FETCH nome_cursor INTO variavel_record -> N PRECISA
+ 
+END LOOP; -- n precisa do close tb 
+
+-- Controlando um Cursor Explícito utilizando CURSOR FOR LOOP
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  CURSOR  employees_cursor  IS
+  SELECT  *
+  FROM    employees;
+BEGIN
+  FOR employees_record IN  employees_cursor
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_record.employee_id || ' - ' ||
+                         employees_record.first_name || ' ' || 
+                         employees_record.last_name || ' - ' ||
+                         employees_record.department_id || ' - ' ||
+                         employees_record.job_id || ' - ' ||
+                         employees_record.phone_number || ' - ' ||
+                         LTRIM(TO_CHAR(employees_record.salary, 'L99G999G999D99')));
+
+  END LOOP;
+END;
+
+-- CURSOR FOR LOOP utilizando Sub-consulta
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+BEGIN
+  FOR employees_record IN  (SELECT  *
+                            FROM    employees)
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_record.employee_id || ' - ' ||
+                         employees_record.first_name || ' ' || 
+                         employees_record.last_name || ' - ' ||
+                         employees_record.department_id || ' - ' ||
+                         employees_record.job_id || ' - ' ||
+                         employees_record.phone_number || ' - ' ||
+                         LTRIM(TO_CHAR(employees_record.salary, 'L99G999G999D99')));
+
+  END LOOP;
+END;
+
+Item 46 - Cursor explicito com parametros
+
+CURSOR nome_cursorc[(Param1 tipodado, ..)] is comando select;
+
+CURSOR employees_cursor(pdepartment_id NUMBER, pjob_id VARCHAR(2) 
+IS SELECT * FROM EMPLOYEES where department_id = pdepartment_id and job_id = pjob_id)
+OPEN employees_cursor (60, 'IT_PROG');
+
+-- CURSOR FOR LOOP com parâmetros
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  CURSOR  employees_cursor 
+         (pdepartment_id NUMBER,
+          pjob_id VARCHAR2)
+  IS
+  SELECT  *
+  FROM    employees
+  WHERE   department_id = pdepartment_id  AND
+          job_id = pjob_id;
+BEGIN
+  FOR employees_record IN  employees_cursor (60, 'IT_PROG')
+  LOOP
+     DBMS_OUTPUT.PUT_LINE(employees_record.employee_id || ' - ' ||
+                         employees_record.first_name || ' ' || 
+                         employees_record.last_name || ' - ' ||
+                         employees_record.department_id || ' - ' ||
+                         employees_record.job_id || ' - ' ||
+                         employees_record.phone_number || ' - ' ||
+                         LTRIM(TO_CHAR(employees_record.salary, 'L99G999G999D99')));
+
+  END LOOP;
+END;
+
+Item 47 - Select for update
+
+
+
+-- Cursor Explícito com SELECT FOR UPDATE
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  CURSOR  employees_cursor (pjob_id VARCHAR2)
+  IS
+  SELECT  *
+  FROM    employees
+  WHERE   job_id = pjob_id
+  FOR UPDATE;
+BEGIN
+  FOR employees_record IN  employees_cursor ('AD_VP')
+  LOOP
+      UPDATE employees
+      SET salary = salary * (1 + 10 / 100)
+      WHERE CURRENT OF employees_cursor;
+  END LOOP;
+  COMMIT;
+END;
