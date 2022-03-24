@@ -1,0 +1,89 @@
+Item 57 - Criando funções
+- indicado quando rotina tem que retornar obrigatoriamente um valor
+ - caso n retorne de forma obrigatoria, usar procedure
+- retorna um tipo de dado
+- Funções podem ter parametros out e in out
+
+CREATE OR REPLACE FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+  (pemployee_id   IN NUMBER)
+   RETURN NUMBER
+IS 
+  vSalary  employees.salary%TYPE;
+BEGIN
+  SELECT salary
+  INTO   vsalary
+  FROM   employees
+  WHERE employee_id = pemployee_id;
+  RETURN (vsalary);
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN 
+    RAISE_APPLICATION_ERROR(-20001, 'Empregado inexistente');
+  WHEN OTHERS THEN
+    RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || ' - ' || SQLERRM);
+END;
+
+-- Executando a Função pelo Bloco PL/SQL
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+ACCEPT pemployee_id PROMPT 'Digite o Id do empregado: '
+DECLARE
+  vEmployee_id  employees.employee_id%TYPE := &pemployee_id;
+  vSalary       employees.salary%TYPE;
+BEGIN
+  vsalary := FNC_CONSULTA_SALARIO_EMPREGADO(vEmployee_id);
+  DBMS_OUTPUT.PUT_LINE('Salario: ' || vsalary);
+END;
+
+Item 58 - Utilizando funções em comandos SQL
+
+- Função deve estar no servidor
+- função deve ser retornar apenas uma linha
+- n pode ter comandos DML (commit, rollback)
+- Função deve ter apenas parametros do tipo IN
+- função n deve ter retorno bool, record ou table
+- função n pode chamar outras funnções que n cumpram os requisitos anteriores
+
+-- Utilizando Funções em comandos SQL
+
+CREATE OR REPLACE FUNCTION FNC_CONSULTA_TITULO_CARGO_EMPREGADO
+  (pjob_id   IN jobs.job_id%TYPE)
+   RETURN VARCHAR2
+IS 
+  vJob_title jobs.job_title%TYPE;
+BEGIN
+  SELECT job_title
+  INTO   vJob_title
+  FROM   jobs
+  WHERE  job_id = pjob_id;
+  RETURN (vJob_title);
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN 
+    RAISE_APPLICATION_ERROR(-20001, 'Job inexistente');
+  WHEN OTHERS THEN
+    RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || ' - ' || SQLERRM);
+END;
+
+-- Utilizando Funções em comandos SQL
+
+SELECT employee_id, first_name, last_name, job_id, FNC_CONSULTA_TITULO_CARGO_EMPREGADO(job_id) "JOB TITLE"
+FROM   employees;
+
+-- Executando a Função pelo comando SELECT
+
+SELECT FNC_CONSULTA_TITULO_CARGO_EMPREGADO('IT_PROG')
+FROM   dual;
+
+-- Executando a Função pelo comando SELECT
+
+SELECT FNC_CONSULTA_SALARIO_EMPREGADO(130)
+FROM   dual;
+
+
+Item 59 - Recompilando funções
+
+ALTER FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO COMPILE;
+
+Item 60 - Removendo funções
+
+DROP FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO;
