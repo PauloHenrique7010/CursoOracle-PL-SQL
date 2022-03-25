@@ -1,0 +1,96 @@
+Item 62 - Gerenciando Dependências de objetos
+- Sempre que um objeto do banco de dados for alterado, todos
+  os objetos do mesmo banco de dados que dependem diretamente ou indiretamente 
+  dele são invalidados (status 'INVALID') automaticamente em cascata
+- Quando um programa fizer uma chamada a uma procedure ou função
+  invalid, o oracle automaticamente tentará recompilar o objeto
+- Ideal é o programador fazer esse gerenciamento, pois pode dar erro
+  no automatico
+- Tipos
+ - Dependência Direta
+  - Uma função/procedure depende diretamente de um objeto
+ - Dependência Indireta
+  - Objeto depende de um objeto atraves de outro
+  - Referencia uma outra procedure que referencia o objeto
+ - Dependência Local
+  - Mais comum
+  - Referencia um objeto que ta no msm bd
+ - Dependencia remota
+  - Referencia um objeto em outro bd
+  
+
+-- Consultando Dependencias Diretas dos objetos do seu schema utilizando a visão USER_DEPENDENCIES 
+
+DESC user_dependencies
+-- exibe as referencias da procedure/função - coluna referenced_name
+
+SELECT *
+FROM   user_dependencies
+WHERE  referenced_name = 'EMPLOYEES' AND
+       referenced_type = 'TABLE';
+       
+-- Consultando Dependencias Diretas e Indiretas dos objetos do seu schema utilizando a visão USER_DEPENDENCIES 
+
+SELECT      *
+FROM        user_dependencies
+START WITH  referenced_name = 'EMPLOYEES' AND
+            referenced_type = 'TABLE'
+CONNECT BY PRIOR  name = referenced_name AND
+                  type = referenced_type;
+                  
+
+-- Consultando Dependencias Diretas e Indiretas dos objetos de todos schemas utilizando a visão DBA_DEPENDENCIES        
+
+-- Conecte-se como SYS
+
+DESC DBA_DEPENDENCIES
+
+SELECT      *
+FROM        dba_dependencies
+START WITH  referenced_owner = 'HR' AND
+            referenced_name = 'EMPLOYEES' AND
+            referenced_type = 'TABLE'
+CONNECT BY PRIOR  owner = referenced_owner AND
+                  name =  referenced_name   AND
+                  type =  referenced_type;
+                  
+-- Consultando objetos Inválidos do schema do seu usuário 
+
+DESC USER_OBJECTS
+
+SELECT object_name, object_type, last_ddl_time, timestamp, status
+FROM   user_objects
+WHERE  status = 'INVALID';
+
+
+
+Item 63 - Utilizando as Visões DEPTREE e IDEPTREE
+- outra forma de consultar as dependencias de um objeto
+- Rodar o script abaixo
+@D:\Outros\Curso\Programas\OracleDatabase21cXE\dbhomeXE\rdbms\admin\utldtree.sql  
+ - Executar no sql developer
+ - "@" - identificador pro sql entender que é pra rodar o arquivo
+ - Rodar duas vezes
+- EXEC DEPTREE_FILL('tipoobjeto','owner','nome_objeto');
+
+-- Executando a procedure DEPTREE_FILL
+
+exec DEPTREE_FILL('TABLE','HR','EMPLOYEES')
+
+-- Utilizando as Visões DEPTREE
+- Nested_level(Coluna) mostra o nivel de dependencias
+ - caso nivel 2, aquela linha depende da(s) linha(s) de nivel 1, e assim sucessivamente
+
+DESC deptree
+
+SELECT   *
+FROM     deptree
+ORDER by seq#
+
+
+-- Utilizando as Visões IDEPTREE
+
+desc ideptree
+
+SELECT *
+FROM ideptree;
