@@ -1,0 +1,392 @@
+Item 65 - Criando Packages - Conceito
+
+- Pacote composto por duas areas, specification e body(não obrigatorio)
+ - SPECIFICATION 
+  - pública
+ - Body
+  - implementa a specification
+ Objetivo, organizar as procedures que tenham relação entre si.
+ - Similar a uma stored procedures
+ - Beneficios
+  - Performance, quando carrega uma package, carrega todos os itens
+    dela e já deixa em memoria para mais velocidade
+ - Compontentes:
+  - Variavfeis, const, cursor, exceção, procedures e funções.
+ - Componentes publicos são declarados na package specification
+ - componentes privados são declarados na package body
+ - Package basicamente é uma biblioteca com funções
+ - Packages criadas ficam na lateral esquerda -> "Pacotes"
+
+Item 66 - Criando Packages Specification
+
+-- Criando o Package Specification 
+
+create or replace PACKAGE PCK_EMPREGADOS
+IS
+
+	gMinSalary     employees.salary%TYPE;
+
+	PROCEDURE PRC_INSERE_EMPREGADO
+	(pfirst_name    IN VARCHAR2,
+	plast_name     IN VARCHAR2,
+	pemail         IN VARCHAR2,
+	pphone_number  IN VARCHAR2,
+	phire_date     IN DATE DEFAULT SYSDATE,
+	pjob_id        IN VARCHAR2,
+	pSALARY        IN NUMBER,
+	pCOMMICION_PCT IN NUMBER,
+	pMANAGER_ID    IN NUMBER,
+	pDEPARTMENT_ID IN NUMBER);
+
+	PROCEDURE PRC_AUMENTA_SALARIO_EMPREGADO
+	(pemployee_id   IN NUMBER,
+	ppercentual    IN NUMBER);
+
+	FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+	(pemployee_id   IN NUMBER)
+	RETURN NUMBER;
+
+END PCK_EMPREGADOS;
+
+Item 67 - Criando o Package Body
+- Precisa do corpo das procedures e functions
+- Pra editar os packages, Aba lateral -> Pacotes -> botão direito -> editar
+
+-- Criando o Package Body
+
+create or replace PACKAGE BODY PCK_EMPREGADOS
+IS
+	PROCEDURE PRC_INSERE_EMPREGADO
+	  (pfirst_name    IN VARCHAR2,
+	   plast_name     IN VARCHAR2,
+	   pemail         IN VARCHAR2,
+	   pphone_number  IN VARCHAR2,
+	   phire_date     IN DATE DEFAULT SYSDATE,
+	   pjob_id        IN VARCHAR2,
+	   pSALARY        IN NUMBER,
+	   pCOMMICION_PCT IN NUMBER,
+	   pMANAGER_ID    IN NUMBER,
+	   pDEPARTMENT_ID IN NUMBER)
+	IS 
+	BEGIN
+	  INSERT INTO employees (
+		employee_id,
+		first_name,
+		last_name,
+		email,
+		phone_number,
+		hire_date,
+		job_id,
+		salary,
+		commission_pct,
+		manager_id,
+		department_id )
+	  VALUES (
+		employees_seq.nextval,
+		pfirst_name,
+		plast_name,
+		pemail,
+		pphone_number,
+		phire_date,
+		pjob_id,
+		psalary,
+		pcommicion_pct,
+		pmanager_id,
+		pdepartment_id );
+	EXCEPTION
+	  WHEN OTHERS THEN
+		 RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle ' || SQLCODE || SQLERRM);
+	END;
+
+	PROCEDURE PRC_AUMENTA_SALARIO_EMPREGADO
+	  (pemployee_id   IN NUMBER,
+	   ppercentual    IN NUMBER)
+	IS
+	  -- Nenhuma váriável declarada
+	BEGIN
+	  UPDATE employees 
+	  SET salary = salary * (1 + ppercentual / 100)
+	  WHERE employee_id = pemployee_id;
+
+	EXCEPTION
+	  WHEN OTHERS 
+	  THEN
+		 RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle: ' || SQLCODE || ' - ' || SQLERRM);
+	END;
+
+	FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+	  (pemployee_id   IN NUMBER)
+	   RETURN NUMBER
+	IS 
+	  vsalary  employees.salary%TYPE;
+	BEGIN
+	  SELECT salary
+	  INTO   vsalary
+	  FROM   employees
+	  WHERE employee_id = pemployee_id;
+	  RETURN (vsalary);
+	EXCEPTION
+	  WHEN NO_DATA_FOUND THEN 
+		  RAISE_APPLICATION_ERROR(-20001, 'Empregado inexistente');
+	  WHEN OTHERS THEN
+		 RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || SQLERRM);
+	END;
+
+END PCK_EMPREGADOS;
+
+Item 68 - Referenciando componentes de uma package
+
+-- Referenciando Componentes de uma Package 
+
+BEGIN
+  PCK_EMPREGADOS.PRC_INSERE_EMPREGADO('Bob', 'Dylan','BDYLAN','515.258.4861',SYSDATE,'IT_PROG',20000,NULL,103,60);
+  COMMIT;
+END;
+
+BEGIN
+  PCK_EMPREGADOS.PRC_INSERE_EMPREGADO('John', 'Lenon','JLENON','515.244.4861',SYSDATE,'IT_PROG',15000,NULL,103,60);
+  COMMIT;
+END;
+
+Item 69 - Procedimento de uma única execução na Seção e Debuger
+- Executado quando referenciar qualquer componente de uma package
+ - Quando chamar uma função do package, ele executa uma função "global" antes
+  - bom para definir variavel global na package
+  - só executa uma vez por sessão no bd
+
+-- Procedimento de uma unica execução na Seção
+
+create or replace PACKAGE BODY PCK_EMPREGADOS
+IS
+PROCEDURE PRC_INSERE_EMPREGADO
+  (pfirst_name    IN VARCHAR2,
+   plast_name     IN VARCHAR2,
+   pemail         IN VARCHAR2,
+   pphone_number  IN VARCHAR2,
+   phire_date     IN DATE DEFAULT SYSDATE,
+   pjob_id        IN VARCHAR2,
+   pSALARY        IN NUMBER,
+   pCOMMICION_PCT IN NUMBER,
+   pMANAGER_ID    IN NUMBER,
+   pDEPARTMENT_ID IN NUMBER)
+IS 
+BEGIN
+  IF  pSalary < PCK_EMPREGADOS.gMinSalary  
+  THEN
+      RAISE_APPLICATION_ERROR(-20002, 'Salario não pode ser inferior ao menor salario dos empregados!');
+  END IF;
+      
+  INSERT INTO employees (
+    employee_id,
+    first_name,
+    last_name,
+    email,
+    phone_number,
+    hire_date,
+    job_id,
+    salary,
+    commission_pct,
+    manager_id,
+    department_id )
+  VALUES (
+    employees_seq.nextval,
+    pfirst_name,
+    plast_name,
+    pemail,
+    pphone_number,
+    phire_date,
+    pjob_id,
+    psalary,
+    pcommicion_pct,
+    pmanager_id,
+    pdepartment_id );
+EXCEPTION
+  WHEN OTHERS THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+PROCEDURE PRC_AUMENTA_SALARIO_EMPREGADO
+  (pemployee_id   IN NUMBER,
+   ppercentual    IN NUMBER)
+IS
+  -- Nenhuma váriável declarada
+BEGIN
+  UPDATE employees 
+  SET salary = salary * (1 + ppercentual / 100)
+  WHERE employee_id = pemployee_id;
+
+EXCEPTION
+  WHEN OTHERS 
+  THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle: ' || SQLCODE || ' - ' || SQLERRM);
+END;
+
+FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+  (pemployee_id   IN NUMBER)
+   RETURN NUMBER
+IS 
+  vsalary  employees.salary%TYPE;
+BEGIN
+  SELECT salary
+  INTO   vsalary
+  FROM   employees
+  WHERE employee_id = pemployee_id;
+  RETURN (vsalary);
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN 
+      RAISE_APPLICATION_ERROR(-20001, 'Empregado inexistente');
+  WHEN OTHERS THEN
+     RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+BEGIN 
+  SELECT MIN(salary)
+  INTO   PCK_EMPREGADOS.gMinSalary
+  FROM   employees;
+END PCK_EMPREGADOS;
+
+Item 70 - Recompilando uma Package
+
+-- Recompilando Package Specification de Banco de Dados
+
+ALTER PACKAGE PCK_EMPREGADOS COMPILE SPECIFICATION;
+
+-- Recompilando Package Body de Banco de Dados
+
+ALTER PACKAGE PCK_EMPREGADOS COMPILE BODY;
+
+Item 71 - Removendo uma Package
+
+-- Removendo Package Body do Banco de Dados
+
+DROP PACKAGE BODY PCK_EMPREGADOS;
+
+-- Removendo Package Body e o Package Specification
+
+DROP PACKAGE PCK_EMPREGADOS;
+
+-- Recriando o Package Specification
+
+create or replace PACKAGE PCK_EMPREGADOS
+IS
+
+	gMinSalary     employees.salary%TYPE;
+
+	PROCEDURE PRC_INSERE_EMPREGADO
+	(pfirst_name    IN VARCHAR2,
+	plast_name     IN VARCHAR2,
+	pemail         IN VARCHAR2,
+	pphone_number  IN VARCHAR2,
+	phire_date     IN DATE DEFAULT SYSDATE,
+	pjob_id        IN VARCHAR2,
+	pSALARY        IN NUMBER,
+	pCOMMICION_PCT IN NUMBER,
+	pMANAGER_ID    IN NUMBER,
+	pDEPARTMENT_ID IN NUMBER);
+
+	PROCEDURE PRC_AUMENTA_SALARIO_EMPREGADO
+	(pemployee_id   IN NUMBER,
+	ppercentual    IN NUMBER);
+
+	FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+	(pemployee_id   IN NUMBER)
+	RETURN NUMBER;
+
+END PCK_EMPREGADOS;
+
+-- Recriando o Package Body
+
+create or replace PACKAGE BODY PCK_EMPREGADOS
+IS
+PROCEDURE PRC_INSERE_EMPREGADO
+  (pfirst_name    IN VARCHAR2,
+   plast_name     IN VARCHAR2,
+   pemail         IN VARCHAR2,
+   pphone_number  IN VARCHAR2,
+   phire_date     IN DATE DEFAULT SYSDATE,
+   pjob_id        IN VARCHAR2,
+   pSALARY        IN NUMBER,
+   pCOMMICION_PCT IN NUMBER,
+   pMANAGER_ID    IN NUMBER,
+   pDEPARTMENT_ID IN NUMBER)
+IS 
+BEGIN
+  IF  pSalary < PCK_EMPREGADOS.gMinSalary  
+  THEN
+          RAISE_APPLICATION_ERROR(-20002, 'Salario não pode ser inferior ao menor salario dos empregados!');
+  END IF;
+      
+  INSERT INTO employees (
+    employee_id,
+    first_name,
+    last_name,
+    email,
+    phone_number,
+    hire_date,
+    job_id,
+    salary,
+    commission_pct,
+    manager_id,
+    department_id )
+  VALUES (
+    employees_seq.nextval,
+    pfirst_name,
+    plast_name,
+    pemail,
+    pphone_number,
+    phire_date,
+    pjob_id,
+    psalary,
+    pcommicion_pct,
+    pmanager_id,
+    pdepartment_id );
+EXCEPTION
+  WHEN OTHERS THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+PROCEDURE PRC_AUMENTA_SALARIO_EMPREGADO
+  (pemployee_id   IN NUMBER,
+   ppercentual    IN NUMBER)
+IS
+  -- Nenhuma váriável declarada
+BEGIN
+  UPDATE employees 
+  SET salary = salary * (1 + ppercentual / 100)
+  WHERE employee_id = pemployee_id;
+
+EXCEPTION
+  WHEN OTHERS 
+  THEN
+     RAISE_APPLICATION_ERROR(-20001, 'Erro Oracle: ' || SQLCODE || ' - ' || SQLERRM);
+END;
+
+FUNCTION FNC_CONSULTA_SALARIO_EMPREGADO
+  (pemployee_id   IN NUMBER)
+   RETURN NUMBER
+IS 
+  vsalary  employees.salary%TYPE;
+BEGIN
+  SELECT salary
+  INTO   vsalary
+  FROM   employees
+  WHERE employee_id = pemployee_id;
+  RETURN (vsalary);
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN 
+      RAISE_APPLICATION_ERROR(-20001, 'Empregado inexistente');
+  WHEN OTHERS THEN
+     RAISE_APPLICATION_ERROR(-20002, 'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+BEGIN 
+  SELECT MIN(salary)
+  INTO   PCK_EMPREGADOS.gMinSalary
+  FROM   employees;
+END PCK_EMPREGADOS;
+
+
+Item 72 - Vantagens e Beneficios do uso de packages
+ - Organização
+ - Performance (ao carregar uma procedure de uma package, carrega ela toda e fica na memoria)
+ - Para editar package, o usuário precisa ser owner e ter permissão
