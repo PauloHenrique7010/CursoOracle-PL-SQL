@@ -1,0 +1,396 @@
+Item 73 - Database DML Triggers
+ - Gatilhos (DML - Insert, Update e Delete)
+ - Executado automaticamente pelo seu gatilho
+ - Associado a uma tabela ou view
+ - Usada para implementar regras de negocio
+ - Não pode fazer controle de transação (só sé tiver PRAGMA AUTONOMOUS_TRANSACTION)
+  - Pois ela está no meio do evento que a disparou
+ - Quando for definir uma triger,
+  - Definir quando deverá ocorrer (antes, dps, ao invés de.)
+  - Definir o que fará (insert, update)
+  - Definir tipo (Statement ou for each Row)
+   - Statment - executa o corpo de trigger para a execução de um comando, msm que varias linhas sejam afetadas
+   - For each row - Executa o corpo de trigger para cada linha alterada
+  - Definir o corpo da trigger
+
+Item 74 - Database DML Triggers a Nível de comando
+
+-- Database DML Triggers a Nível de Comando
+
+CREATE OR REPLACE TRIGGER B_I_EMPLOYEES_S_TRG
+BEFORE INSERT
+ON employees --ou nome da view
+BEGIN
+  IF  (TO_CHAR(SYSDATE, 'DAY') IN ('SABADO', 'DOMINGO') OR
+       TO_NUMBER(TO_CHAR(SYSDATE,'HH24')) NOT BETWEEN 8 AND 18) 
+  THEN
+       RAISE_APPLICATION_ERROR( -20001,'O cadastramento de Empregados só é permitido em dias de semana dentro do horário comercial');
+  END IF;
+END;
+
+-- Testando a validação da Trigger
+
+BEGIN
+  PCK_EMPREGADOS.PRC_INSERE_EMPREGADO('George', 'Harrison','GHARRISON','515.258.5690',SYSDATE,'IT_PROG',25000,NULL,103,60);
+  COMMIT;
+END;
+
+-- Criando uma Trigger Combinando Vários Eventos
+
+CREATE OR REPLACE TRIGGER B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG
+BEFORE INSERT OR UPDATE OR DELETE
+ON employees
+BEGIN
+  IF  (TO_CHAR(SYSDATE, 'DAY') IN ('SABADO', 'DOMINGO') OR
+       TO_NUMBER(TO_CHAR(SYSDATE,'HH24')) NOT BETWEEN 8 AND 18) 
+  THEN
+      CASE
+        WHEN INSERTING 
+        THEN 
+             RAISE_APPLICATION_ERROR( -20001,'O cadastramento de Empregados só é permitido em dias de semana, dentro do horário comercial');
+        WHEN DELETING
+        THEN 
+             RAISE_APPLICATION_ERROR( -20002,'A deleção de Empregados só é permitido em dias de semana, dentro do horário comercial');
+        ELSE
+             RAISE_APPLICATION_ERROR( -20003,'A atualização de Empregados só é permitido em dias de semana, dentro do horário comercial');
+        END CASE;
+  END IF;
+END;
+
+-- Testando a validação da Trigger
+
+BEGIN
+  PCK_EMPREGADOS.PRC_INSERE_EMPREGADO('George', 'Harrison','GHARRISON','515.258.5690',SYSDATE,'IT_PROG',25000,NULL,103,60);
+  COMMIT;
+END;
+
+Item 75 - Database DML Triggers a Nível de linha,
+
+- se o comando n alterar nenhuma linha.. o trigger não será chamado (quando tiver a clausula WHEN)
+- Pseudo campos :OLD E :NEW (só existe trigger a nivel de linha)
+ - valores para uma coluna antes e dps do trigger(ex: coluna n existia antes..)
+
+-- Criando a Tabela de  Log de Auditoria para a Tabela EMPLOYEES para a coluna SALARY
+
+DROP TABLE employees_log;
+
+CREATE TABLE employees_log
+(employees_log_id NUMBER (11) NOT NULL,
+ dt_log    DATE DEFAULT SYSDATE NOT NULL ,
+ usuario   VARCHAR2(30),
+ evento    CHAR(1) NOT NULL,
+ employee_id  NUMBER(6) NOT NULL,
+ salary_old  NUMBER(8,2),
+ salary_new  NUMBER(8,2));
+ 
+ALTER TABLE employees_log
+ADD CONSTRAINT employees_log_pk PRIMARY KEY (employees_log_id);
+
+CREATE SEQUENCE employees_log_seq
+START WITH 1
+INCREMENT BY 1
+NOCACHE
+NOCYCLE
+NOMAXVALUE;
+
+-- Criando uma Trigger que gera Log de Auditoria para a Tabela EMPLOYEES para a coluna SALARY 
+
+CREATE OR REPLACE TRIGGER A_IUD_EMPLOYESS_R_TRG
+  AFTER INSERT OR UPDATE OF SALARY OR DELETE 
+  ON EMPLOYEES
+  FOR EACH ROW
+DECLARE
+	vevento       employees_log.evento%TYPE;
+	vemployee_id  employees_log.employee_id%TYPE;
+BEGIN
+	CASE
+		WHEN INSERTING 
+        THEN
+			vevento      := 'I';
+			vemployee_id := :new.employee_id;
+		WHEN UPDATING 
+        THEN
+			vevento      := 'U';
+			vemployee_id := :new.employee_id;
+		ELSE
+			vevento      := 'D';
+			vemployee_id := :old.employee_id;
+	END CASE;
+	INSERT INTO employees_log
+		(employees_log_id, 
+         dt_log, 
+         usuario, 
+         evento, 
+         employee_id, 
+         salary_old, 
+         salary_new)
+	VALUES
+		(employees_log_seq.nextval,
+		 SYSDATE,
+		 USER,
+		 vevento,
+		 vemployee_id,
+		 :old.salary,
+		 :new.salary);
+END A_IUD_EMPLOYESS_R_TRG;
+
+-- Testando o disparo da Trigger
+
+UPDATE employees 
+SET    salary = salary * 1.5;
+
+-- Desabilitando a Trigger B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG para poder testar a Trigger fora do horário comercial
+
+alter trigger B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG disable;
+
+-- Testando a TRIGGER
+
+UPDATE employees 
+SET    salary = salary * 1.5;
+
+-- Consultando a Tabela employees_log
+
+SELECT *
+FROM   employees_log;
+
+COMMIT;
+ 
+-- Limpando a tabela de Log
+
+DELETE FROM employees_log;
+
+COMMIT;
+
+SELECT *
+FROM   employees_log;
+
+-- Cláusula WHEN
+
+CREATE OR REPLACE TRIGGER A_IUD_EMPLOYESS_R_TRG
+  AFTER INSERT OR UPDATE OF SALARY OR DELETE 
+  ON EMPLOYEES
+  FOR EACH ROW
+  WHEN (new.job_id <> 'AD_PRES')
+DECLARE
+	vevento       employees_log.evento%TYPE;
+	vemployee_id  employees_log.employee_id%TYPE;
+BEGIN
+	CASE
+		WHEN INSERTING THEN
+			vevento      := 'I';
+			vemployee_id := :new.employee_id;
+		WHEN UPDATING THEN
+			vevento      := 'U';
+			vemployee_id := :new.employee_id;
+		ELSE
+			vevento      := 'D';
+			vemployee_id := :old.employee_id;
+	END CASE;
+	INSERT INTO employees_log
+		(employees_log_id, dt_log, usuario, evento, employee_id, salary_old, salary_new)
+	VALUES
+		(employees_log_seq.nextval,
+		 SYSDATE,
+		 USER,
+		 vevento,
+		 vemployee_id,
+		 :old.salary,
+		 :new.salary);
+END A_IUD_EMPLOYESS_R_TRG;
+
+-- Testando a TRIGGER
+
+UPDATE employees 
+SET    salary = salary * 1.5;
+
+SELECT *
+FROM   employees_log;
+
+COMMIT;
+
+Item 76 - Regras de Mutating Tables
+- tabelas que sofrem alteração durante execução de trigger
+- tabela que está associada a uma trigger sempre será uma mutating table_name
+- Não pode em mutating table:
+ - Não alterar dados em colunas chave primaria, estrangeiras ou
+   unicas que a trigger está associada
+ - Restrição valida para todas triggers em nivel de linha
+ - Restrição para trigger em nivel de comando com operação "DELETE CASCADE"
+ - Não ler info de tabela que ta sendo modificadas
+  - trigger nivel de linha, e nivel de comando na operação "DELETE CASCADE"
+
+
+-- Regras de Mutating Tables
+
+-- Violação da Regra 1 de Mutating Table
+
+/*
+Regra 1 de Mutating Tables: não altere dados em colunas de chaves primárias, 
+chaves estrangeiras ou chaves únicas de tabelas relacionadas àquela na qual 
+a trigger disparada está associada
+*/
+
+CREATE OR REPLACE TRIGGER A_I_EMPLOYEES_R_TRG
+AFTER INSERT 
+ON employees
+FOR EACH ROW
+BEGIN
+  UPDATE employees
+  SET    email = UPPER(SUBSTR(:new.first_name,1,1) || :new.last_name) --email é unique
+  WHERE  employee_id = :new.employee_id;
+END;
+
+-- Testando Violação da Regra 1 
+
+SET VERIFY OFF
+BEGIN
+  PRC_INSERE_EMPREGADO('Eric', 'Clapton','ECLAPTON','515.188.4861',SYSDATE,'IT_PROG',15000,NULL,103,60);
+  COMMIT;
+END;
+
+-- Corrigindo a Trigger para que não viole a Regra 1
+
+CREATE OR REPLACE TRIGGER A_I_EMPLOYEES_R_TRG
+BEFORE INSERT 
+ON employees
+FOR EACH ROW
+BEGIN
+  :new.email := UPPER(SUBSTR(:new.first_name,1,1) || (:new.last_name));
+END;
+
+-- Testando a correção da Violação da Regra 1 
+SET VERIFY OFF
+BEGIN
+  PRC_INSERE_EMPREGADO('Eric', 'Clapton','ECLAPTON','515.188.4861',SYSDATE,'IT_PROG',15000,NULL,103,60);
+  COMMIT;
+END;
+
+-- Violação da Regra 2 de Mutating Table
+
+/*
+Regra 2 de Mutating Tables: Não leia informações de tabelas que estejam sendo modificadas
+*/
+
+CREATE OR REPLACE TRIGGER B_U_VALIDATE_SALARY_EMPLOYEES_R_TRG
+BEFORE UPDATE OF salary
+ON  employees
+FOR EACH ROW
+DECLARE
+  vMaxSalary  employees.salary%TYPE;
+BEGIN
+  SELECT MAX(salary)
+  INTO   vMaxSalary
+  FROM   employees;
+
+  IF  :new.salary > vMaxSalary * 1.2 
+  THEN  
+      RAISE_APPLICATION_ERROR(-20001, 'Salario não pode ser superior ao maior salario + 20%');
+  END IF;
+END;
+
+-- Testando Violação da Regra 2 
+
+SET VERIFY OFF
+UPDATE employees
+SET    salary = 70000
+WHERE  employee_id = 100;
+
+COMMIT;
+
+DROP TRIGGER A_I_EMPLOYEES_R_TRG;
+
+DROP TRIGGER B_U_VALIDATE_SALARY_EMPLOYEES_R_TRG;
+
+-- Resolvendo o problema de Mutating Tables
+
+-- como o trigger por nivel de linha n pode ler as infos
+ - ele faz um trigger de statement antes e joga a variavel
+   numa variavel global atraves do package, o trigger em linha
+   compara esse valor.
+ - da pra usar o trigger statment quando ele não é o delete cascade
+ - OBS: n é muito bom (performance) ficar contornando o problema da trigger
+   e sim fazer isso fora da trigger.
+
+CREATE OR REPLACE PACKAGE PCK_EMPLOYEES_DADOS 
+AS
+  TYPE max_salary_table_type IS TABLE OF NUMBER(10,2)
+  INDEX BY BINARY_INTEGER;
+  
+  gMaxSalary  max_salary_table_type;
+
+END PCK_EMPLOYEES_DADOS;
+
+CREATE OR REPLACE TRIGGER B_IU_VALIDATE_SALARY_EMPLOYEES_S_TRG
+BEFORE INSERT OR UPDATE OF salary
+ON  employees
+DECLARE
+  vMaxSalary  employees.salary%TYPE;
+BEGIN
+  SELECT MAX(salary)
+  INTO   PCK_EMPLOYEES_DADOS.gMaxSalary(1)
+  FROM   employees;
+END;
+
+CREATE OR REPLACE TRIGGER B_IU_VALIDATE_SALARY_EMPLOYEES_R_TRG
+BEFORE INSERT OR UPDATE OF salary
+ON  employees
+FOR EACH ROW
+DECLARE
+  vMaxSalary  employees.salary%TYPE;
+BEGIN
+  IF  :new.salary  > PCK_EMPLOYEES_DADOS.gMaxSalary(1) * 1.2
+  THEN  
+      RAISE_APPLICATION_ERROR(-20001, 'Novo salario não pode ser superior ao maior salario + 20%');
+  END IF;
+END;
+
+-- Testando Violação da Regra 2 
+
+SET VERIFY OFF
+UPDATE employees
+SET salary = 30000 -- só vai ser barrado pelo trigger se colocar um valor maior que o maior salario existente
+WHERE employee_id = 100;
+
+COMMIT;
+
+Item 77 - Desabilitando e Habilitando Database DML Triggers
+- Quando trigger desabilitada.
+ - ao executar um comando que ela seria chamada, não será chamada
+ - bom para testar algum comando e n quer que a trigger seja chamada
+
+-- Desabilitando Database DML Triggers
+
+ALTER TRIGGER B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG disable;
+
+-- Habilitando Database DML Triggers
+
+ALTER TRIGGER B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG enable;
+
+-- Desabilitando todas Database DML Triggers da tabela employees
+
+ALTER TABLE employees DISABLE ALL TRIGGERS;
+
+-- Habilitando todas Database DML Triggers da tabela employees
+
+ALTER TABLE employees ENABLE ALL TRIGGERS;
+
+Item 78 - Consultando Database DML Triggers pelo Dicionário de Dados
+
+-- Consultando Database DML Triggers pelo Dicionário de Dados
+- User_triggers, All_triggers e DBA_triggers
+ - Para visualizar/editar uma trigger, painel esquerdo, tabela desejada -> clica pra abrir
+   - vai na aba Triggers (infos da tabela que será exibido na msm area de onde digita comando SQL
+   
+
+SELECT *
+FROM   user_triggers
+WHERE  table_name = 'EMPLOYEES'  AND
+       table_owner = 'HR';
+
+Item 79 - Removendo uma Database DML Triggers
+
+-- Removendo uma Database DML Trigger
+
+DROP TRIGGER B_IUD_VALIDA_HORARIO_EMPLOYEES_S_TRG;
+
+Item 80 - Apresentação do Curso
