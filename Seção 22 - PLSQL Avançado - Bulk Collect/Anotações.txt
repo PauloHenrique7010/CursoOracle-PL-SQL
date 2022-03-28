@@ -1,0 +1,130 @@
+Item 82 - Bulk Collect
+
+- Context Switch e Performance
+- Comandos PLSQL São executados pelo PLSQL Statement Executor
+- Comandos SQL São executados pelo SQL Statement Executor
+ - Quando em um bloco plsql há um codigo sql, esse código é executado pelo SQL Statement Executor(PLSQL Statment passa pro sql statement)
+  - essa transferencia de info, é chamada de context switch
+  - Deteriora performance do programa
+- Select pega multiplas linhas e armazena em uma collections
+- Usar com moderação
+ - Quando select retornar muitas linhas, irá consumir muita memória!
+ - Dá pra usar limit
+
+Item 83 - Associative Array of Records - Bulk Collect
+
+
+-- Associative Array of Records - Bulk Collect
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  TYPE employees_table_type IS TABLE OF employees%rowtype
+  INDEX BY BINARY_INTEGER;  -- Type Associative Array (Obrigatorio para associative array
+  employees_table  employees_table_type;
+BEGIN
+  SELECT *
+    BULK COLLECT INTO employees_table 
+  FROM employees;
+  FOR i IN employees_table.first..employees_table.last  
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_table(i).employee_id || ' - ' || 
+                         employees_table(i).first_name || ' - ' || 
+                         employees_table(i).last_name || ' - ' ||
+                         employees_table(i).phone_number || ' - ' ||
+                         employees_table(i).job_id || ' - ' ||
+                         TO_CHAR(employees_table(i).salary,'99G999G999D99'));   
+  END LOOP;
+END;
+
+
+Item 84 - Nested Table of Records - Bulk Collect
+
+-- quando não tem o index by BINARY_INTEGER é um nested table
+-- Nested Table precisa inicialisar
+
+-- Nested Table of Records - Bulk Collect
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  TYPE employees_table_type IS TABLE OF employees%rowtype;
+  employees_table  employees_table_type := employees_table_type();
+BEGIN
+  SELECT *
+    BULK COLLECT INTO employees_table 
+  FROM employees;
+  FOR i IN employees_table.first..employees_table.last  
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_table(i).employee_id || ' - ' || 
+                         employees_table(i).first_name || ' - ' || 
+                         employees_table(i).last_name || ' - ' ||
+                         employees_table(i).phone_number || ' - ' ||
+                         employees_table(i).job_id || ' - ' ||
+                         TO_CHAR(employees_table(i).salary,'99G999G999D99'));   
+  END LOOP;
+END;
+
+Item 85 - Varray of Records - Bulk Collect
+
+
+
+-- Varray of Records - Bulk Collect
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  TYPE employees_table_type IS VARRAY (200) OF employees%rowtype;
+  employees_table  employees_table_type := employees_table_type();
+BEGIN
+  SELECT *
+    BULK COLLECT INTO employees_table 
+  FROM employees;
+  FOR i IN employees_table.first..employees_table.last  
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_table(i).employee_id || ' - ' || 
+                         employees_table(i).first_name || ' - ' || 
+                         employees_table(i).last_name || ' - ' ||
+                         employees_table(i).phone_number || ' - ' ||
+                         employees_table(i).job_id || ' - ' ||
+                         TO_CHAR(employees_table(i).salary,'99G999G999D99'));   
+  END LOOP;
+END;
+
+Item 86 - Utilizando métodos para controlar Collections
+
+- nome_collections.nome_metodo [(parametros)]
+ - Principais metodos
+  - Exists(n)
+  - Count
+  - First (Quando vazia retorna null)
+  - Last (msm coisa do first)
+  - Limit (Apenas Varray)
+  - Prior(n) - retorna indice anterior a n
+  - Next(n) - retorna indice apos n
+  - Extend(n) - adiciona elemento nulo
+  - Trim - Remove elemento do final da collections
+  - Delete - remove elementos da collection
+
+
+-- Utilizando Métodos para controlar Collections
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+DECLARE
+  TYPE employees_table_type IS TABLE OF employees%rowtype;
+  employees_table  employees_table_type := employees_table_type();
+BEGIN
+  SELECT *
+    BULK COLLECT INTO employees_table 
+  FROM employees;
+  FOR i IN employees_table.first..employees_table.last  
+  LOOP
+    DBMS_OUTPUT.PUT_LINE(employees_table(i).employee_id || ' - ' || 
+                         employees_table(i).first_name || ' - ' || 
+                         employees_table(i).last_name || ' - ' ||
+                         employees_table(i).phone_number || ' - ' ||
+                         employees_table(i).job_id || ' - ' ||
+                         TO_CHAR(employees_table(i).salary,'99G999G999D99'));   
+  END LOOP;
+END;
