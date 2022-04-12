@@ -1,0 +1,179 @@
+Item 87 - Bulk Collect e For All
+ - Comandos Insert, update e delete utilizam collections para  
+   modificar multiplas linhas de dados muito rapidamente
+ - For all só permite um comando dml
+ - Se tem um package de for loop
+   para cada interação do for, vai ser mandado um comando pro bd
+   - Quando usa o for all, ele empacota todos os comandos
+     e envia os comandos uma unica vez..
+
+
+--
+-- Oracle PL/SQL Avançado 
+--
+-- Seção 25 - Bulk Collect e FOR ALL
+--
+-- Aula 1 - Bulk Collect - FOR ALL
+
+-- Bulk Collect 
+
+SELECT count(*)
+FROM   employees;
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+CREATE OR REPLACE PROCEDURE PRC_UPDATE_SALARY
+  (ppercentual IN NUMBER)
+AS
+  TYPE employee_id_table_type IS TABLE OF employees.employee_id%TYPE 
+  INDEX BY BINARY_INTEGER;  -- Type Associative Array
+  employee_id_table  employee_id_table_type;
+BEGIN
+  SELECT DISTINCT employee_id 
+    BULK COLLECT INTO employee_id_table  
+  FROM employees;
+  
+  DBMS_OUTPUT.PUT_LINE('Linhas recuperadas: ' || employee_id_table.COUNT);
+  
+  FOR indice IN 1..employee_id_table.COUNT  LOOP 
+    UPDATE employees e
+    SET    e.salary = e.salary * (1 + ppercentual / 100)
+    WHERE  e.employee_id = employee_id_table(indice);   -- para cada UPDATE dentro do FOR LOOP Ocorrerá troca de contexto (Context Switch) 
+	--
+    -- outro comandos
+    --
+  END LOOP;
+	
+END;
+
+-- Consultando antes
+
+SELECT *
+FROM employees;
+
+--- Executando PRC_UPDATE_TAX 
+
+exec PRC_UPDATE_SALARY(10)
+
+-- Consultando depois
+
+SELECT *
+FROM employees;
+
+ROLLBACK;
+
+-- Bulk Collect - FOR ALL
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+CREATE OR REPLACE PROCEDURE PRC_UPDATE_SALARY
+  (ppercentual IN NUMBER)
+AS
+  TYPE employee_id_table_type IS TABLE OF employees.employee_id%TYPE 
+  INDEX BY BINARY_INTEGER;  -- Type Associative Array
+  employee_id_table  employee_id_table_type;
+BEGIN
+
+  SELECT DISTINCT employee_id 
+    BULK COLLECT INTO employee_id_table  
+  FROM employees;
+  
+  DBMS_OUTPUT.PUT_LINE('Linhas recuperadas: ' || employee_id_table.COUNT);
+  
+  FORALL indice IN 1..employee_id_table.COUNT  -- FOR ALL empacota todos os UPDATES e envia o pacote em 1 única troca de contexto (Context Switch)
+    UPDATE employees e
+    SET    e.salary = e.salary * (1 + ppercentual / 100)
+    WHERE  e.employee_id = employee_id_table(indice); 
+	
+END;
+
+-- Consultando
+
+SELECT *
+FROM employees;
+
+--- Executando PRC_UPDATE_TAX 
+
+exec PRC_UPDATE_SALARY(10)
+
+-- Consultando
+
+SELECT *
+FROM employees;
+
+ROLLBACK;
+
+Item 88 - Bulk Collect com Limit
+Collections PLSQL são essencialmente arrays em memoria
+Collections muito grandes consomem grandes qtde de memoria e pode 
+afetar o servidor
+- As vezes pode ser necessario dividir o resultado em pedaços (CLAUSULA LIMIT)
+
+--
+-- Oracle PL/SQL Avançado 
+--
+-- Seção 25 - Bulk Collect e FOR ALL
+--
+-- Aula 2 - Bulk Collect - FOR ALL e LIMIT
+
+-- Bulk Collect - FOR ALL
+
+SELECT COUNT(*)
+FROM employees;
+
+SET SERVEROUTPUT ON
+SET VERIFY OFF
+CREATE OR REPLACE PROCEDURE PRC_UPDATE_SALARY2
+  (ppercentual IN NUMBER)
+AS
+  vLimit CONSTANT INTEGER(2) := 30;
+  TYPE employee_id_table_type IS TABLE OF employees.employee_id%TYPE 
+  INDEX BY BINARY_INTEGER;  -- Type Associative Array
+  employee_id_table  employee_id_table_type;
+  CURSOR employees_cursor IS
+    SELECT employee_id 
+    FROM employees;
+BEGIN
+
+  OPEN employees_cursor;
+  
+  LOOP
+    FETCH employees_cursor 
+    BULK COLLECT INTO employee_id_table LIMIT vlimit;
+    
+    EXIT WHEN employee_id_table.COUNT = 0;
+    
+    DBMS_OUTPUT.PUT_LINE('Linhas recuperadas: ' || employee_id_table.COUNT);
+    
+    FORALL indice IN 1..employee_id_table.COUNT 
+      
+      UPDATE employees e
+      SET    e.salary = e.salary * (1 + ppercentual / 100)
+      WHERE  e.employee_id = employee_id_table(indice);  
+    
+  END LOOP;
+  
+  CLOSE employees_cursor;
+  -- COMMIT;
+  
+END;
+
+SELECT *
+FROM employees;
+
+--- Executando PRC_UPDATE_SALARY2 
+
+exec PRC_UPDATE_SALARY2(10)
+
+-- Consultando
+
+SELECT *
+FROM employees;
+
+ROLLBACK;
+
+
+
+
+
+
