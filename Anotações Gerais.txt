@@ -1,0 +1,6 @@
+Quando os procedure não imprimirem o resultado, rodar esse comando (talvez bug) e usar esse serveroutput.
+
+set serveroutput on size 30000;
+begin
+    DBMS_OUTPUT.PUT_LINE('yawin');
+end;
