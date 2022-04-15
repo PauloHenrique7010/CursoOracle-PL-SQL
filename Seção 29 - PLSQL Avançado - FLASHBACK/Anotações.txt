@@ -1,0 +1,249 @@
+Item 98 - Package DBMS_FLASHBACK
+
+ - Permite ao usuário o acesso a uma imagem consistente do BD (backup)
+ - Segmentos de undo
+ - Como se o bd fizesse backups automaticos e pegassemos alguns deles
+ - Bom para quando faz um commit indevido
+ - Pode voltar com base no tempo ou com base na transação
+  - cada transação feita no bd tem um id, da pra escolher para qual quer voltar
+ - Deve ter o DBMS_FLASHBACK.
+ - "DBMS_FLASHBACK.ENABLE_AT_TIME ([DATA])
+
+-- Conectar como SYS
+
+grant execute on DBMS_FLASHBACK to hr;
+
+-- Conectar como hr
+
+-- Causando um problema 
+
+SELECT employee_id, first_name, last_name, job_id, salary
+FROM   employees
+WHERE  job_id = 'IT_PROG';
+
+UPDATE employees
+SET    salary = salary * 2
+WHERE  job_id = 'IT_PROG';
+
+SELECT employee_id, first_name, last_name, job_id, salary
+FROM   employees
+WHERE  job_id = 'IT_PROG';
+
+COMMIT;
+
+-- Utilizando a Package DBMS_FLASHBACK
+
+DECLARE
+  CURSOR c_employees IS
+    SELECT *
+    FROM   employees
+    WHERE  job_id = 'IT_PROG';
+    
+   r_employees  c_employees%ROWTYPE;
+BEGIN
+  DBMS_FLASHBACK.enable_at_time(sysdate - 30 / 1440);  -- Posicionando 10 minutos no passado
+  
+  OPEN c_employees;
+  
+  DBMS_FLASHBACK.disable;  -- Posicionando de volta ao presente
+
+  LOOP 
+    FETCH c_employees INTO r_employees; 
+    
+    EXIT WHEN c_employees%NOTFOUND; 
+    
+    UPDATE employees 
+    SET    salary = r_employees.salary
+    WHERE  employee_id = r_employees.employee_id;
+    
+  END LOOP; 
+  
+  CLOSE c_employees;
+  COMMIT;
+END;
+
+-- Consultando após a correção do problema
+
+SELECT employee_id, first_name, last_name, job_id, salary
+FROM   employees
+WHERE  job_id = 'IT_PROG';
+
+Item 99 - Flashback Query
+
+ - Consulta o "passado" de forma mais simples
+ - Interval "INTERVAL 'X' YEAR, INTERVAL 'X' SECOND
+
+-- Causando um problema 
+
+	SELECT employee_id, first_name, last_name, job_id, salary
+	FROM   employees
+	WHERE  job_id = 'FI_ACCOUNT';
+
+UPDATE employees
+SET    salary = salary * 2
+WHERE  job_id = 'FI_ACCOUNT';
+
+SELECT employee_id, first_name, last_name, job_id, salary
+FROM   employees
+WHERE  job_id = 'FI_ACCOUNT';
+
+COMMIT;
+
+
+DECLARE
+  CURSOR c_employees IS
+    SELECT *
+    FROM   employees as of timestamp (systimestamp - interval '15' minute);
+    
+  r_employees  c_employees%ROWTYPE;
+  
+BEGIN  
+  OPEN c_employees;
+
+  LOOP 
+    FETCH c_employees INTO r_employees; 
+    
+    EXIT WHEN c_employees%NOTFOUND; 
+    
+    UPDATE employees 
+    SET    salary = r_employees.salary
+    WHERE  employee_id = r_employees.employee_id;
+    
+  END LOOP; 
+  
+  CLOSE c_employees;
+  
+  COMMIT;
+END;
+
+-- Consultando após a correção do problema
+
+SELECT employee_id, first_name, last_name, job_id, salary
+FROM   employees
+WHERE  job_id = 'FI_ACCOUNT';
+
+-- pra ver as conf de undo
+SELECT NAME, VALUE FROM v$parameter where name like '%undo%'
+Name.undo_retention vem em segundo
+
+Item 100 - Flashback drop
+
+ - Lixeira dos objetos dropados
+ - n da pra usar com plsql (só se for com o SQL IMMEDIATE/sql dinamico)
+ - Drop de tabela ou objeto
+ - Oracle quando precisa de espaço, consome automaticamente o que
+   está na lixiera
+ - 'FLASHBACK TABLE [nome] to before drop;'
+ - 'PURGE TABLE nome_tabela'; -- remove tabela da tabela
+ - 'PURGE user_recyclebin;' -- limpa a lixeira
+ - Só n traz as constraint de foreign key de outras tabelas para 
+   esta e desta para outras, tem que fazer manualmente
+-- Flashback Drop
+
+-- Conecte-se como HR
+
+CREATE TABLE employees_copia 
+AS
+SELECT *
+FROM employees;
+
+SELECT *
+FROM   user_objects
+WHERE  object_name = 'EMPLOYEES_COPIA';
+
+SELECT *
+FROM employees_copia;
+
+-- Removendo um objeto
+
+DROP TABLE employees_copia;
+
+SELECT *
+FROM   user_objects
+WHERE  object_name = 'EMPLOYEES_COPIA';
+
+SELECT *
+FROM employees_copia;
+
+-- Consultando a Lixeira
+
+SELECT *
+FROM   user_recyclebin
+WHERE  original_name = 'EMPLOYEES_COPIA';
+
+-- Confimando que o objeto foi removido
+
+SELECT *
+FROM   user_objects
+WHERE object_name = 'EMPLOYEES_COPIA';
+
+-- Restaurando o Objeto a partir da Lixeira
+
+FLASHBACK TABLE EMPLOYEES_COPIA TO BEFORE DROP;
+
+-- Confimando que o objeto foi restaurado
+
+SELECT *
+FROM user_objects
+WHERE object_name = 'EMPLOYEES_COPIA';
+
+SELECT *
+FROM employees_copia;
+
+SELECT *
+FROM   user_recyclebin
+WHERE  original_name = 'EMPLOYEES_COPIA';
+
+
+Item 101 - Flashback Table
+
+ - Menos utilizando, ultimo recurso pra recuperar.
+ - Recupera uma ou mais tabelas de um determinado
+ - Pode gerar problema de constraint, existe
+   a possibilidade de ter que voltar as outras tabelas 
+   que fazem referencia a esta,
+ - INVIABILIZA o flashback
+   - ALTER TABLE X DROP COLUMN/PARTITION
+   - CREATE CLUSTER
+   - TRUNCATE TABLE
+   - ALTER TABLE X MOVE
+ - Tem que ter privilegio FLASH TABLE ou FLASHBACK ANY TABLE
+
+-- Utilizando Flashback Table
+
+CREATE TABLE employees_copia2
+AS
+SELECT *
+FROM employees;
+
+Conectado como SYS 
+
+GRANT FLASHBACK ON hr.employees_copia2 TO hr;
+
+Conectado como SYS ou HR
+
+-- Talvez mude os ids primary, permite que o oracle faça isso
+ALTER TABLE hr.employees_copia2 ENABLE ROW MOVEMENT;
+
+-- Conectado como HR
+
+SELECT *
+FROM hr.employees_copia2 ;
+
+DELETE FROM hr.employees_copia2 ;
+
+COMMIT;
+
+-- Consultando a Tabela
+
+SELECT *
+FROM hr.employees_copia2 ;
+
+-- Resaurando a Tabela para posição de 5 minutos atras
+
+FLASHBACK TABLE hr.employees_copia2 TO TIMESTAMP systimestamp - interval '5' minute;
+
+-- Consultando a Tabela
+
+SELECT *
+FROM hr.employees_copia2;
