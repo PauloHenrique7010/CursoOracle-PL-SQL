@@ -1,0 +1,322 @@
+Item 102 - LOBs - Introdução
+
+ - Large Objects
+ - Permitem armazenar objetos grandes no BD
+ - Armazena dados desestruturados (imagem, video, arquivos em geral)
+ - Podem ser lidos por c#, Python...
+ - Tipos
+   - Lobs Internos
+    - Dentro do BD
+	- Participam das transações
+	- Tipos
+	 - CLOB
+	  - Usado para armazenar dado do tipo caracter
+	  - Tamanho Máximo -> (4gb -1) * DB_BLOCK_SIZE (entre 8tb e 128 tb)
+	 - BLOB
+	  - Imagens, Fotografias, arquivos..
+	  - tamanho máximo é o msm parametro do clob
+	 - NCLOB
+	  - Variante do CLOB
+	  - Permite armazenar qualquer lingua do mundo
+	  - Multiple-byte (usa 2 bytes ou 3 byte para cada caracter
+	  - tamanho máximo é o msm parametro do clob
+	  
+   - Lobs Externos
+    - Fora do BD
+	- Ponteiro que apontam onde está no SO
+	 - Referencia para o arquivo apenas
+	- Tipos
+	 - BFILE
+	  - Referencia a um arquivo binario
+	  - Tamanho máximo -> 4gb
+	  - Tamanho maximo nome -> 255 caracter
+	  - Tamanho maximo diretorio (nome) -> 30
+   - LOBs
+    - Não podem fazer parte de clustered table
+	- Não pode ser analisados utilizando comando ANALYZE
+	- Não podem ser incluido em um indice particionado
+	  de uma index-organized-table
+	- Não pode ser usado em um Varray
+	- Não pode ser usado em Group by, order, select distinct, join, funções de agregação
+	- Lob locator
+	 - Todo lob está associado com um lob alocator
+	 - o Locator associado ao LOB interno é chamado de 
+	   LOB Locator, enquanto que o locator associado a um 
+	   arquivo externo é chamado de BFILE Locator
+
+Item 103 - Utilizando CLOBs
+ - EMPTY_CLOB() -> inicializa um clob
+ - Caso o clob tenha menos de 100k de tamanho, pode usar o substr
+ - caso contrario, DBMS_LOB.SUBSTR. (MAS PODE USAR SEMPRE ESSE.. )
+ - SÓ PODE TER uma coluna long por tabela, quanto lob pode ter varias
+ - long, os arquivos ficam dentro da tabela.
+  - quando lob, fica em outro lugar.
+
+-- Criando tabela com CLOBs
+
+DROP TABLE job_resumes;
+CREATE TABLE job_resumes
+(resume_id   NUMBER,
+ first_name  VARCHAR2(200),
+ last_name   VARCHAR2(200),
+ resume      CLOB);
+ 
+INSERT INTO job_resumes
+VALUES (1, 'Paul', 'Jones', EMPTY_CLOB());
+
+COMMIT;
+ 
+SELECT resume_id, first_name, last_name, SUBSTR(resume,1,30)
+FROM   job_resumes;
+
+SELECT LENGTH(resume), DBMS_LOB.GETLENGTH(resume)
+FROM   job_resumes;
+
+SELECT DBMS_LOB.SUBSTR(resume,DBMS_LOB.GETLENGTH(resume),1) 
+FROM   job_resumes;
+
+-- Inserindo dados na coluna CLOB
+
+INSERT INTO job_resumes 
+VALUES  (2, 'Robert','Johnson' , 'Project Manager - Scrum Master, Porto Alegre, RS, Brasil');
+
+SELECT resume_id, first_name, last_name, SUBSTR(resume,1,30)
+FROM   job_resumes;
+
+SELECT LENGTH(resume), DBMS_LOB.GETLENGTH(resume)
+FROM   job_resumes;
+
+SELECT DBMS_LOB.SUBSTR(resume,DBMS_LOB.GETLENGTH(resume),1) 
+FROM   job_resumes;
+
+COMMIT;
+
+CREATE OR REPLACE PROCEDURE PRC_INSERE_RESUME
+(presume_id IN job_resumes.resume_id%TYPE, presume IN VARCHAR2) 
+IS
+   vresume_localizador    CLOB;
+   vTamanho_Texto         NUMBER;
+   vDeslocamento          NUMBER;
+BEGIN
+   SELECT resume
+   INTO   vresume_localizador
+   FROM   job_resumes
+   WHERE  resume_id = presume_id
+   FOR UPDATE;
+
+   vDeslocamento := 1;
+   vTamanho_Texto := LENGTH(presume);
+   DBMS_LOB.WRITE(vresume_localizador,vTamanho_Texto,vDeslocamento,presume);
+   COMMIT;
+END;
+
+exec PRC_INSERE_RESUME(1,'DBA - Database administrator , Porto Alegre, RS, Brasil')
+
+SELECT resume_id, first_name, last_name, SUBSTR(resume,1,30)
+FROM   job_resumes;
+
+SELECT LENGTH(resume), DBMS_LOB.GETLENGTH(resume)
+FROM   job_resumes;
+
+SELECT DBMS_LOB.SUBSTR(resume,DBMS_LOB.GETLENGTH(resume),1) 
+FROM   job_resumes;
+
+CREATE OR REPLACE PROCEDURE PRC_EXIBE_RESUME
+(presume_id IN job_resumes.resume_id%TYPE) 
+IS
+   vresume_localizador    CLOB;
+   vTamanho_Texto         NUMBER;
+   vDeslocamento          NUMBER;
+   vTexto                 VARCHAR2(32767);
+   vLoop                  NUMBER;
+   vQuantidade            NUMBER := 1;
+   vExibe                 VARCHAR2(240);
+BEGIN
+   SELECT resume
+   INTO   vresume_localizador
+   FROM   job_resumes
+   WHERE  resume_id = presume_id
+   FOR UPDATE;
+
+   vDeslocamento := 1;
+   vTamanho_Texto := DBMS_LOB.GETLENGTH(vresume_localizador);
+   DBMS_LOB.READ(vresume_localizador,vTamanho_Texto,vDeslocamento,vTexto);
+   vLoop := TRUNC((LENGTH(vTexto))/240)+1;
+   FOR i IN 1 .. vLoop LOOP
+     vExibe := SUBSTR(vTexto,vQuantidade,240);
+     vQuantidade := vQuantidade + 240;
+     DBMS_OUTPUT.PUT_LINE(vExibe);
+   END LOOP;
+   COMMIT;
+END;
+
+SET SERVEROUTPUT ON
+exec PRC_EXIBE_RESUME(1)
+
+exec PRC_EXIBE_RESUME(2)
+
+Item 104 - Utilizando BLOBs 
+ - Binary Large Objects
+ - Arquivos no geral
+
+-- Criando tabela com BLOBs
+
+DROP TABLE job_profiles;
+CREATE TABLE job_profiles
+(resume_id   NUMBER,
+ first_name  VARCHAR2(200),
+ last_name   VARCHAR2(200),
+ profile_picture  BLOB);
+ 
+-- Conectar como SYS
+
+CREATE DIRECTORY IMAGENS AS 'C:\imagens';
+GRANT READ, WRITE ON DIRECTORY imagens TO hr;
+
+-- Criar uma pasta C:\imagens no windows
+
+-- Importando uma imagens de um arquivo binário para uma coluna BLOB
+
+DECLARE
+  vArquivoOrigem   BFILE;  
+  vBlobDestino     BLOB;
+  vNomeArquivo     VARCHAR2(100) := 'CursoOracleCompleto.jpeg';
+  vDiretorio       VARCHAR2(100) := 'IMAGENS';
+BEGIN
+  vArquivoOrigem := BFILENAME(vDiretorio,vNomeArquivo);
+  
+  IF DBMS_LOB.FILEEXISTS(vArquivoOrigem) = 1 THEN
+     INSERT INTO job_profiles
+     VALUES (1, 'Oracle', 'Man', EMPTY_BLOB())
+       RETURNING profile_picture INTO vBlobDestino;
+    
+    DBMS_LOB.OPEN(vArquivoOrigem, DBMS_LOB.LOB_READONLY);
+    DBMS_LOB.LOADFROMFILE(vBlobDestino, vArquivoOrigem, DBMS_LOB.GETLENGTH(vArquivoOrigem));
+    DBMS_LOB.CLOSE(vArquivoOrigem);
+  
+    COMMIT;
+  ELSE 
+    DBMS_OUTPUT.PUT_LINE('Arquivo: ' || vNomeArquivo || ' não existe!');
+  END IF;
+EXCEPTION
+  WHEN others THEN
+    DBMS_LOB.CLOSE(vArquivoOrigem);
+    RAISE_APPLICATION_ERROR(-20001,'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+SELECT *
+FROM job_profiles;
+
+-- Exportando uma imagens a partir de uma coluna BLOB para um arquivo do S.O.
+--
+
+DECLARE
+  vArquivoDestino   UTL_FILE.FILE_TYPE;  
+  vBuffer           RAW(32767);
+  vQuantidade       BINARY_INTEGER := 32767;
+  vPosicao          INTEGER := 1;
+  vBlobOrigem       BLOB;
+  vTamanhoBlob      INTEGER;
+  vNomeArquivoDestino  VARCHAR2(100) := 'CursoOracleCompletoCopia.jpeg';
+  vDiretorioDestino    VARCHAR2(100) := 'IMAGENS';
+  vResumeId         NUMBER := 1;
+BEGIN
+  SELECT profile_picture
+  INTO   vBlobOrigem
+  FROM   job_profiles
+  WHERE  resume_id = vResumeId
+  FOR UPDATE;
+  
+  vTamanhoBlob := DBMS_LOB.GETLENGTH(vBlobOrigem);
+  DBMS_OUTPUT.PUT_LINE('Tamanho do arquivo: '||vTamanhoBlob);      
+
+-- Cria o arquivo binário de destino
+
+  vArquivoDestino := UTL_FILE.FOPEN(vDiretorioDestino,vNomeArquivoDestino,'wb',32767);
+  
+  -- Leitura do BLOB e escrita no arquivo
+  WHILE vPosicao < vTamanhoBlob LOOP
+    DBMS_LOB.READ (vBlobOrigem, vQuantidade, vPosicao, vBuffer);
+    UTL_FILE.PUT_RAW(vArquivoDestino,vBuffer , TRUE);
+    vPosicao := vPosicao + vQuantidade;
+  END LOOP;
+  -- Fecha o arquivo.
+  UTL_FILE.FCLOSE(vArquivoDestino);
+
+EXCEPTION
+  WHEN others THEN
+    IF UTL_FILE.is_open(vArquivoDestino) THEN
+       UTL_FILE.FCLOSE(vArquivoDestino);
+       RAISE_APPLICATION_ERROR(-20001,'Erro Oracle ' || SQLCODE || SQLERRM);
+    END IF;
+END;
+
+
+-- Exemplo de Atualização de uma coluna BLOB
+
+DECLARE
+  vArquivoOrigem   BFILE;  
+  vBlobDestino     BLOB;
+  vNomeArquivo     VARCHAR2(100) := 'PLEspecialista.jpg';
+  vDiretorio       VARCHAR2(100) := 'IMAGENS';
+BEGIN
+  vArquivoOrigem := BFILENAME(vDiretorio,vNomeArquivo);
+  
+  IF DBMS_LOB.FILEEXISTS(vArquivoOrigem) = 1 THEN
+     SELECT profile_picture
+     INTO vBlobDestino
+     FROM job_profiles
+     WHERE resume_id = 1
+     FOR UPDATE;
+    
+    DBMS_LOB.OPEN(vArquivoOrigem, DBMS_LOB.LOB_READONLY);
+    DBMS_LOB.TRIM(vBlobDestino, 0);
+    DBMS_LOB.LOADFROMFILE(vBlobDestino, vArquivoOrigem, DBMS_LOB.GETLENGTH(vArquivoOrigem));
+    DBMS_LOB.CLOSE(vArquivoOrigem);
+  
+    COMMIT;
+  ELSE 
+    DBMS_OUTPUT.PUT_LINE('Arquivo: ' || vNomeArquivo || ' não existe!');
+  END IF;
+EXCEPTION
+  WHEN others THEN
+    DBMS_LOB.CLOSE(vArquivoOrigem);
+    RAISE_APPLICATION_ERROR(-20001,'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+Item 105 - Utilizando BFile
+
+-- Criando tabela com coluna BFILE
+
+DROP TABLE job_Profiles;
+CREATE TABLE job_Profiles
+(resume_id   NUMBER,
+ first_name  VARCHAR2(200),
+ last_name   VARCHAR2(200),
+ profile_picture  BFILE);
+ 
+ DESC job_profiles
+ 
+-- Armazenando imagens em uma coluna BFILE
+
+DECLARE
+  vNomeArquivo   VARCHAR2(100) := 'CursoOracleCompleto.jpeg';
+  vDiretorio     VARCHAR2(100) := 'IMAGENS';
+  vArquivoOrigem   BFILE;  
+BEGIN
+
+  vArquivoOrigem := BFILENAME(vDiretorio,vNomeArquivo);
+  
+  IF DBMS_LOB.FILEEXISTS(vArquivoOrigem) = 1 THEN
+     INSERT INTO job_profiles
+     VALUES (1, 'Oracle', 'Man', vArquivoOrigem);
+     COMMIT;
+  END IF;
+   
+EXCEPTION
+  WHEN others THEN
+    RAISE_APPLICATION_ERROR(-20001,'Erro Oracle ' || SQLCODE || SQLERRM);
+END;
+
+SELECT *
+FROM job_Profiles;
